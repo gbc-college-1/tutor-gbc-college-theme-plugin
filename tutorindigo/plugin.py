@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import os
-import typing as t
 from glob import glob
+import typing as t
 
 import importlib_resources
 from tutor import hooks
-from tutor.__about__ import __version_suffix__
 from tutormfe.hooks import PLUGIN_SLOTS
+from tutor.__about__ import __version_suffix__
 
 from .__about__ import __version__
 
@@ -23,7 +23,7 @@ config: t.Dict[str, t.Dict[str, t.Any]] = {
         "VERSION": __version__,
         "WELCOME_MESSAGE": "The place for all your online learning",
         "PRIMARY_COLOR": "#15376D",  # Indigo
-        "ENABLE_DARK_TOGGLE": True,
+        "ENABLE_DARK_TOGGLE": False,
         # Footer links are dictionaries with a "title" and "url"
         # To remove all links, run:
         # tutor config save --set INDIGO_FOOTER_NAV_LINKS=[]
@@ -53,8 +53,7 @@ hooks.Filters.ENV_TEMPLATE_TARGETS.add_items(
     ],
 )
 
-# Force the rendering of scss files, even though they are included in a
-# "partials" directory
+# Force the rendering of scss files, even though they are included in a "partials" directory
 hooks.Filters.ENV_PATTERNS_INCLUDE.add_items(
     [
         r"indigo/lms/static/sass/partials/lms/theme/",
@@ -79,7 +78,7 @@ with open(
 # Override openedx & mfe docker image names
 @hooks.Filters.CONFIG_DEFAULTS.add(priority=hooks.priorities.LOW)
 def _override_openedx_docker_image(
-    items: list[tuple[str, t.Any]],
+    items: list[tuple[str, t.Any]]
 ) -> list[tuple[str, t.Any]]:
     openedx_image = ""
     mfe_image = ""
@@ -114,32 +113,34 @@ indigo_styled_mfes = [
     "discussions",
 ]
 
-for mfe in indigo_styled_mfes:
-    hooks.Filters.ENV_PATCHES.add_items(
-        [
-            (
-                f"mfe-dockerfile-post-npm-install-{mfe}",
-                """
-RUN npm install @edly-io/indigo-frontend-component-footer@^3.0.0
-RUN npm install '@edx/frontend-component-header@npm:@edly-io/indigo-frontend-component-header@^4.0.0'
-RUN npm install '@edx/brand@npm:@edly-io/indigo-brand-openedx@^2.2.2'
+hooks.Filters.ENV_PATCHES.add_items(
+    [
+        (
+            f"mfe-dockerfile-post-npm-install-{mfe}",
+            """
+           
+RUN npm install @edly-io/indigo-frontend-component-footer@^2.0.0
+RUN npm install '@edx/frontend-component-header@npm:@edly-io/indigo-frontend-component-header@^3.2.2'
+RUN npm install '@edx/brand@git+https://github.com/gbc-college-1/gbc-college-brand.git#master'
 
-""",  # noqa: E501
-            ),
-            (
-                f"mfe-env-config-runtime-definitions-{mfe}",
-                """
-const { default: IndigoFooter } = await import('@edly-io/indigo-frontend-component-footer');
-""",  # noqa: E501
-            ),
-        ]
-    )
+""",
+        )
+        for mfe in indigo_styled_mfes
+    ]
+)
 
 
 hooks.Filters.ENV_PATCHES.add_item(
     (
         "mfe-dockerfile-post-npm-install-authn",
-        "RUN npm install '@edx/brand@npm:@edly-io/indigo-brand-openedx@^2.2.2'",
+        "RUN npm install '@edx/brand@git+https://github.com/gbc-college-1/gbc-college-brand.git#master'",
+    )
+)
+
+hooks.Filters.ENV_PATCHES.add_item(
+    (
+        "mfe-dockerfile-post-npm-install-authoring",
+        "RUN npm install '@edx/brand@git+https://github.com/gbc-college-1/gbc-college-brand.git#master'",
     )
 )
 
@@ -171,14 +172,12 @@ for filename in javascript_files:
         PIPELINE['JAVASCRIPT'][filename]['source_filenames'] += dark_theme_filepath
 
 MFE_CONFIG['INDIGO_ENABLE_DARK_TOGGLE'] = {{ INDIGO_ENABLE_DARK_TOGGLE }}
-MFE_CONFIG['INDIGO_FOOTER_NAV_LINKS'] = {{ INDIGO_FOOTER_NAV_LINKS }}
 """,
         ),
         (
             "openedx-lms-production-settings",
             """
 MFE_CONFIG['INDIGO_ENABLE_DARK_TOGGLE'] = {{ INDIGO_ENABLE_DARK_TOGGLE }}
-MFE_CONFIG['INDIGO_FOOTER_NAV_LINKS'] = {{ INDIGO_FOOTER_NAV_LINKS }}
 """,
         ),
     ]
