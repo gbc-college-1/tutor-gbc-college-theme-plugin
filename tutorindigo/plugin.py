@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import os
-from glob import glob
 import typing as t
+from glob import glob
 
 import importlib_resources
 from tutor import hooks
-from tutormfe.hooks import PLUGIN_SLOTS
 from tutor.__about__ import __version_suffix__
+from tutormfe.hooks import PLUGIN_SLOTS
 
 from .__about__ import __version__
 
@@ -53,7 +53,8 @@ hooks.Filters.ENV_TEMPLATE_TARGETS.add_items(
     ],
 )
 
-# Force the rendering of scss files, even though they are included in a "partials" directory
+# Force the rendering of scss files, even though they are included in a
+# "partials" directory
 hooks.Filters.ENV_PATTERNS_INCLUDE.add_items(
     [
         r"indigo/lms/static/sass/partials/lms/theme/",
@@ -78,7 +79,7 @@ with open(
 # Override openedx & mfe docker image names
 @hooks.Filters.CONFIG_DEFAULTS.add(priority=hooks.priorities.LOW)
 def _override_openedx_docker_image(
-    items: list[tuple[str, t.Any]]
+    items: list[tuple[str, t.Any]],
 ) -> list[tuple[str, t.Any]]:
     openedx_image = ""
     mfe_image = ""
@@ -113,21 +114,26 @@ indigo_styled_mfes = [
     "discussions",
 ]
 
-hooks.Filters.ENV_PATCHES.add_items(
-    [
-        (
-            f"mfe-dockerfile-post-npm-install-{mfe}",
-            """
-           
-RUN npm install @edly-io/indigo-frontend-component-footer@^2.0.0
-RUN npm install '@edx/frontend-component-header@npm:@edly-io/indigo-frontend-component-header@^3.2.2'
+for mfe in indigo_styled_mfes:
+    hooks.Filters.ENV_PATCHES.add_items(
+        [
+            (
+                f"mfe-dockerfile-post-npm-install-{mfe}",
+                """
+RUN npm install @edly-io/indigo-frontend-component-footer@^3.0.0
+RUN npm install '@edx/frontend-component-header@npm:@edly-io/indigo-frontend-component-header@^4.0.0'
 RUN npm install '@edx/brand@git+https://github.com/gbc-college-1/gbc-college-brand.git#master'
 
-""",
-        )
-        for mfe in indigo_styled_mfes
-    ]
-)
+""",  # noqa: E501
+            ),
+            (
+                f"mfe-env-config-runtime-definitions-{mfe}",
+                """
+const { default: IndigoFooter } = await import('@edly-io/indigo-frontend-component-footer');
+""",  # noqa: E501
+            ),
+        ]
+    )
 
 
 hooks.Filters.ENV_PATCHES.add_item(
@@ -172,12 +178,14 @@ for filename in javascript_files:
         PIPELINE['JAVASCRIPT'][filename]['source_filenames'] += dark_theme_filepath
 
 MFE_CONFIG['INDIGO_ENABLE_DARK_TOGGLE'] = {{ INDIGO_ENABLE_DARK_TOGGLE }}
+MFE_CONFIG['INDIGO_FOOTER_NAV_LINKS'] = {{ INDIGO_FOOTER_NAV_LINKS }}
 """,
         ),
         (
             "openedx-lms-production-settings",
             """
 MFE_CONFIG['INDIGO_ENABLE_DARK_TOGGLE'] = {{ INDIGO_ENABLE_DARK_TOGGLE }}
+MFE_CONFIG['INDIGO_FOOTER_NAV_LINKS'] = {{ INDIGO_FOOTER_NAV_LINKS }}
 """,
         ),
     ]
